@@ -1,31 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
 	
-	let count = 0;
-	let name = '';
-	let todos = [];
-	let newTodo = '';
-	
-	function increment() {
-		count += 1;
-	}
-	
-	function addTodo() {
-		if (newTodo.trim()) {
-			todos = [...todos, { id: Date.now(), text: newTodo.trim(), completed: false }];
-			newTodo = '';
-		}
-	}
-	
-	function toggleTodo(id) {
-		todos = todos.map(todo => 
-			todo.id === id ? { ...todo, completed: !todo.completed } : todo
-		);
-	}
-	
-	function deleteTodo(id) {
-		todos = todos.filter(todo => todo.id !== id);
-	}
+	let isDigital = true;
 </script>
 
 <svelte:head>
@@ -150,53 +126,25 @@
 		</nav>
 	</header>
 
-	<section class="intro">
-		<h2>Welcome{name ? `, ${name}` : ''}!</h2>
-		<div class="input-group">
-			<label for="name">What's your name?</label>
-			<input id="name" bind:value={name} placeholder="Enter your name" />
-		</div>
-	</section>
+	<nav class="sub-nav">
+		<a href="#clock" class="active">Clock</a>
+		<a href="#stopwatch">Stopwatch</a>
+		<a href="#timer">Timer</a>
+	</nav>
 
-	<section class="counter">
-		<h3>Interactive Counter</h3>
-		<p>Current count: <strong>{count}</strong></p>
-		<button on:click={increment}>
-			Click me! 🎯
-		</button>
-	</section>
+	<div class="mode-switch">
+		<span class="mode-label" class:active={!isDigital}>Analog</span>
+		<label class="switch">
+			<input type="checkbox" bind:checked={isDigital}>
+			<span class="slider"></span>
+		</label>
+		<span class="mode-label" class:active={isDigital}>Digital</span>
+	</div>
 
-	<section class="todos">
-		<h3>Todo List</h3>
-		<div class="add-todo">
-			<input 
-				bind:value={newTodo} 
-				placeholder="Add a new todo..." 
-				on:keydown={(e) => e.key === 'Enter' && addTodo()}
-			/>
-			<button on:click={addTodo}>Add</button>
-		</div>
-		
-		{#if todos.length > 0}
-			<ul class="todo-list">
-				{#each todos as todo (todo.id)}
-					<li class="todo-item" class:completed={todo.completed}>
-						<input 
-							type="checkbox" 
-							checked={todo.completed}
-							on:change={() => toggleTodo(todo.id)}
-						/>
-						<span>{todo.text}</span>
-						<button class="delete-btn" on:click={() => deleteTodo(todo.id)}>
-							❌
-						</button>
-					</li>
-				{/each}
-			</ul>
-		{:else}
-			<p class="empty">No todos yet. Add one above! 📝</p>
-		{/if}
-	</section>
+	<!-- Main content area -->
+	<main class="content">
+		<!-- Clock/Stopwatch/Timer content will go here -->
+	</main>
 
 	<footer>
 		<p>Built with ❤️ using Svelte and Vite</p>
@@ -247,135 +195,112 @@
 		border-radius: 8px;
 	}
 
-
-	section {
-		background: rgba(255, 255, 255, 0.1);
-		backdrop-filter: blur(10px);
-		border-radius: 15px;
-		padding: 2rem;
-		margin-bottom: 2rem;
-		border: 1px solid rgba(255, 255, 255, 0.2);
-	}
-
-	h2, h3 {
-		margin-top: 0;
-		color: #fff;
-	}
-
-	.input-group {
+	.sub-nav {
 		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
+		justify-content: center;
+		gap: 3rem;
+		margin: 2rem 0 3rem 0;
 	}
 
-	label {
-		font-weight: 600;
-	}
-
-	input {
-		padding: 0.75rem;
-		border: none;
+	.sub-nav a {
+		color: rgba(255, 255, 255, 0.7);
+		text-decoration: none;
+		font-size: 1.2rem;
+		font-weight: 500;
+		padding: 0.5rem 1rem;
 		border-radius: 8px;
-		font-size: 1rem;
-		background: rgba(255, 255, 255, 0.9);
-		color: #333;
-	}
-
-	input::placeholder {
-		color: #666;
-	}
-
-	button {
-		padding: 0.75rem 1.5rem;
-		border: none;
-		border-radius: 8px;
-		font-size: 1rem;
-		font-weight: 600;
-		cursor: pointer;
 		transition: all 0.2s ease;
-		background: #4CAF50;
-		color: white;
+		position: relative;
 	}
 
-	button:hover {
-		background: #45a049;
-		transform: translateY(-2px);
-		box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+	.sub-nav a:hover,
+	.sub-nav a.active {
+		color: #ff6b35;
 	}
 
-	.counter {
-		text-align: center;
+	.sub-nav a.active::after {
+		content: '';
+		position: absolute;
+		bottom: -8px;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 30px;
+		height: 2px;
+		background: #ff6b35;
+		border-radius: 1px;
 	}
 
-	.counter p {
-		font-size: 1.5rem;
-		margin-bottom: 1rem;
-	}
 
-	.counter strong {
-		color: #FFD700;
-		font-size: 2rem;
-	}
-
-	.add-todo {
-		display: flex;
-		gap: 1rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.add-todo input {
-		flex: 1;
-	}
-
-	.todo-list {
-		list-style: none;
-		padding: 0;
-		margin: 0;
-	}
-
-	.todo-item {
+	.mode-switch {
 		display: flex;
 		align-items: center;
+		justify-content: center;
 		gap: 1rem;
-		padding: 1rem;
-		background: rgba(255, 255, 255, 0.1);
-		border-radius: 8px;
-		margin-bottom: 0.5rem;
-		transition: all 0.2s ease;
+		margin: 1rem 0 2rem 0;
 	}
 
-	.todo-item:hover {
-		background: rgba(255, 255, 255, 0.2);
+	.mode-label {
+		color: rgba(255, 255, 255, 0.5);
+		font-size: 1rem;
+		font-weight: 500;
+		transition: color 0.2s ease;
 	}
 
-	.todo-item.completed {
-		opacity: 0.6;
+	.mode-label.active {
+		color: #ff6b35;
 	}
 
-	.todo-item.completed span {
-		text-decoration: line-through;
+	.switch {
+		position: relative;
+		display: inline-block;
+		width: 60px;
+		height: 30px;
 	}
 
-	.todo-item span {
-		flex: 1;
-		font-size: 1.1rem;
+	.switch input {
+		opacity: 0;
+		width: 0;
+		height: 0;
 	}
 
-	.delete-btn {
-		background: #f44336;
-		padding: 0.5rem;
-		font-size: 0.8rem;
+	.slider {
+		position: absolute;
+		cursor: pointer;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: rgba(255, 255, 255, 0.2);
+		transition: 0.3s;
+		border-radius: 30px;
+		border: 1px solid rgba(255, 255, 255, 0.3);
 	}
 
-	.delete-btn:hover {
-		background: #da190b;
+	.slider:before {
+		position: absolute;
+		content: "";
+		height: 22px;
+		width: 22px;
+		left: 3px;
+		bottom: 3px;
+		background-color: white;
+		transition: 0.3s;
+		border-radius: 50%;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 	}
 
-	.empty {
-		text-align: center;
-		font-style: italic;
-		opacity: 0.7;
-		font-size: 1.1rem;
+	input:checked + .slider {
+		background-color: #ff6b35;
+		border-color: #ff6b35;
+	}
+
+	input:checked + .slider:before {
+		transform: translateX(30px);
+	}
+
+	.content {
+		margin-top: 2rem;
+		min-height: 400px;
 	}
 
 	footer {
