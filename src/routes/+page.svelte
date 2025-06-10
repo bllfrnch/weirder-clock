@@ -139,8 +139,8 @@
 			</svg>
 		</div>
 		<nav>
-			<a href="#about">About</a>
-			<a href="#settings">Settings</a>
+			<button type="button">About</button>
+			<button type="button">Settings</button>
 		</nav>
 	</header>
 
@@ -295,11 +295,17 @@
 		gap: 1rem;
 	}
 
-	nav a {
+	nav a,
+	nav button {
 		color: white;
 		text-decoration: none;
 		font-weight: 500;
 		border-radius: 8px;
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-size: inherit;
+		font-family: inherit;
 	}
 
 	.sub-nav {
