@@ -2,6 +2,24 @@
 	import { onMount } from 'svelte';
 	
 	let isDigital = true;
+	let time = new Date();
+
+	onMount(() => {
+		const interval = setInterval(() => {
+			time = new Date();
+		}, 1000);
+
+		return () => clearInterval(interval);
+	});
+
+	// Calculate hand angles
+	$: hours = time.getHours() % 12;
+	$: minutes = time.getMinutes();
+	$: seconds = time.getSeconds();
+	
+	$: hourAngle = (hours * 30) + (minutes * 0.5); // 30 degrees per hour + minute adjustment
+	$: minuteAngle = minutes * 6; // 6 degrees per minute
+	$: secondAngle = seconds * 6; // 6 degrees per second
 </script>
 
 <svelte:head>
@@ -143,11 +161,100 @@
 
 	<!-- Main content area -->
 	<main class="content">
-		<!-- Clock/Stopwatch/Timer content will go here -->
+		{#if isDigital}
+			<div class="digital-clock">
+				<div class="time-display">
+					{time.toLocaleTimeString()}
+				</div>
+			</div>
+		{:else}
+			<div class="analog-clock">
+				<svg viewBox="0 0 200 200" class="clock-face">
+					<!-- Clock face -->
+					<circle cx="100" cy="100" r="98" fill="white" stroke="#333" stroke-width="2"/>
+					
+					<!-- Hour markers -->
+					{#each Array(12) as _, i}
+						<line 
+							x1="100" 
+							y1="8" 
+							x2="100" 
+							y2="20" 
+							stroke="#333" 
+							stroke-width="3" 
+							transform="rotate({i * 30} 100 100)"
+						/>
+					{/each}
+					
+					<!-- Minute markers -->
+					{#each Array(60) as _, i}
+						{#if i % 5 !== 0}
+							<line 
+								x1="100" 
+								y1="8" 
+								x2="100" 
+								y2="14" 
+								stroke="#666" 
+								stroke-width="1" 
+								transform="rotate({i * 6} 100 100)"
+							/>
+						{/if}
+					{/each}
+					
+					<!-- Hour hand -->
+					<line 
+						x1="100" 
+						y1="100" 
+						x2="100" 
+						y2="40" 
+						stroke="#333" 
+						stroke-width="6" 
+						stroke-linecap="round"
+						transform="rotate({hourAngle} 100 100)"
+					/>
+					
+					<!-- Minute hand -->
+					<line 
+						x1="100" 
+						y1="100" 
+						x2="100" 
+						y2="25" 
+						stroke="#333" 
+						stroke-width="4" 
+						stroke-linecap="round"
+						transform="rotate({minuteAngle} 100 100)"
+					/>
+					
+					<!-- Second hand -->
+					<line 
+						x1="100" 
+						y1="100" 
+						x2="100" 
+						y2="20" 
+						stroke="#ff6b35" 
+						stroke-width="2" 
+						stroke-linecap="round"
+						transform="rotate({secondAngle} 100 100)"
+					/>
+					
+					<!-- Second hand circular tip -->
+					<circle 
+						cx="100" 
+						cy="20" 
+						r="4" 
+						fill="#ff6b35"
+						transform="rotate({secondAngle} 100 100)"
+					/>
+					
+					<!-- Center dot -->
+					<circle cx="100" cy="100" r="6" fill="#333"/>
+				</svg>
+			</div>
+		{/if}
 	</main>
 
 	<footer>
-		<p>Built with ❤️ using Svelte and Vite</p>
+		<p>© {new Date().getFullYear()} - The Weird Clock Team</p>
 	</footer>
 </main>
 
@@ -301,6 +408,37 @@
 	.content {
 		margin-top: 2rem;
 		min-height: 400px;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.digital-clock {
+		text-align: center;
+	}
+
+	.time-display {
+		font-size: 4rem;
+		font-weight: 300;
+		color: #ff6b35;
+		font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+		background: rgba(255, 107, 53, 0.1);
+		padding: 2rem 3rem;
+		border-radius: 20px;
+		border: 2px solid rgba(255, 107, 53, 0.3);
+		filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.3));
+	}
+
+	.analog-clock {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	.clock-face {
+		width: 300px;
+		height: 300px;
+		filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
 	}
 
 	footer {
