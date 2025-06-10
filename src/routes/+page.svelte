@@ -3,16 +3,34 @@
 	
 	let isDigital = true;
 	let time = new Date();
+	let currentView = 'clock'; // 'clock', 'stopwatch', 'timer'
+	
+	// Stopwatch state
+	let stopwatchTime = 0;
+	let stopwatchRunning = false;
+	let stopwatchInterval;
+	
+	// Timer state
+	let timerMinutes = 5;
+	let timerSeconds = 0;
+	let timerRunning = false;
+	let timerInterval;
+	let timerTotalTime = 0;
+	let timerInitialTime = 0;
 
 	onMount(() => {
 		const interval = setInterval(() => {
 			time = new Date();
 		}, 1000);
 
-		return () => clearInterval(interval);
+		return () => {
+			clearInterval(interval);
+			if (stopwatchInterval) clearInterval(stopwatchInterval);
+			if (timerInterval) clearInterval(timerInterval);
+		};
 	});
 
-	// Calculate hand angles
+	// Calculate hand angles for regular clock
 	$: hours = time.getHours() % 12;
 	$: minutes = time.getMinutes();
 	$: seconds = time.getSeconds();
@@ -20,6 +38,92 @@
 	$: hourAngle = (hours * 30) + (minutes * 0.5); // 30 degrees per hour + minute adjustment
 	$: minuteAngle = minutes * 6; // 6 degrees per minute
 	$: secondAngle = seconds * 6; // 6 degrees per second
+
+	// Calculate angles for stopwatch (showing elapsed time)
+	$: stopwatchMinutes = Math.floor(stopwatchTime / 60000);
+	$: stopwatchSecondsOnly = Math.floor((stopwatchTime % 60000) / 1000);
+	$: stopwatchCentiseconds = Math.floor((stopwatchTime % 1000) / 10);
+	
+	$: stopwatchMinuteAngle = (stopwatchMinutes % 60) * 6; // 6 degrees per minute
+	$: stopwatchSecondAngle = stopwatchSecondsOnly * 6; // 6 degrees per second
+	$: stopwatchCentisecondAngle = stopwatchCentiseconds * 3.6; // 3.6 degrees per centisecond
+
+	// Calculate angles for timer (showing remaining time)
+	$: timerRemainingMinutes = Math.floor(timerTotalTime / 60000);
+	$: timerRemainingSeconds = Math.floor((timerTotalTime % 60000) / 1000);
+	$: timerMinuteAngle = (timerRemainingMinutes % 60) * 6;
+	$: timerSecondAngle = timerRemainingSeconds * 6;
+	$: timerProgress = timerInitialTime > 0 ? (timerInitialTime - timerTotalTime) / timerInitialTime : 0;
+
+	// View switching
+	function switchView(view) {
+		currentView = view;
+	}
+
+	// Stopwatch functions
+	function startStopwatch() {
+		if (stopwatchRunning) {
+			clearInterval(stopwatchInterval);
+			stopwatchRunning = false;
+		} else {
+			stopwatchRunning = true;
+			stopwatchInterval = setInterval(() => {
+				stopwatchTime += 10;
+			}, 10);
+		}
+	}
+
+	function resetStopwatch() {
+		clearInterval(stopwatchInterval);
+		stopwatchRunning = false;
+		stopwatchTime = 0;
+	}
+
+	function formatStopwatchTime(ms) {
+		const minutes = Math.floor(ms / 60000);
+		const seconds = Math.floor((ms % 60000) / 1000);
+		const centiseconds = Math.floor((ms % 1000) / 10);
+		return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+	}
+
+	// Timer functions
+	function startTimer() {
+		if (timerRunning) {
+			clearInterval(timerInterval);
+			timerRunning = false;
+		} else {
+			if (timerTotalTime === 0) {
+				timerTotalTime = (timerMinutes * 60 + timerSeconds) * 1000;
+				timerInitialTime = timerTotalTime;
+			}
+			timerRunning = true;
+			timerInterval = setInterval(() => {
+				timerTotalTime -= 1000;
+				if (timerTotalTime <= 0) {
+					clearInterval(timerInterval);
+					timerRunning = false;
+					timerTotalTime = 0;
+					// You could add a notification or sound here
+				}
+			}, 1000);
+		}
+	}
+
+	function resetTimer() {
+		clearInterval(timerInterval);
+		timerRunning = false;
+		timerTotalTime = 0;
+		timerInitialTime = 0;
+	}
+
+	function formatTimerTime(ms) {
+		const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+		const minutes = Math.floor(totalSeconds / 60);
+		const seconds = totalSeconds % 60;
+		return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+	}
+
+	$: displayTimerTime = timerTotalTime > 0 ? formatTimerTime(timerTotalTime) : `${timerMinutes.toString().padStart(2, '0')}:${timerSeconds.toString().padStart(2, '0')}`;
 </script>
 
 <svelte:head>
@@ -145,9 +249,27 @@
 	</header>
 
 	<nav class="sub-nav">
-		<a href="#clock" class="active">Clock</a>
-		<a href="#stopwatch">Stopwatch</a>
-		<a href="#timer">Timer</a>
+		<button 
+			type="button" 
+			class:active={currentView === 'clock'}
+			on:click={() => switchView('clock')}
+		>
+			Clock
+		</button>
+		<button 
+			type="button" 
+			class:active={currentView === 'stopwatch'}
+			on:click={() => switchView('stopwatch')}
+		>
+			Stopwatch
+		</button>
+		<button 
+			type="button"
+			class:active={currentView === 'timer'}
+			on:click={() => switchView('timer')}
+		>
+			Timer
+		</button>
 	</nav>
 
 	<div class="mode-switch">
@@ -161,96 +283,392 @@
 
 	<!-- Main content area -->
 	<main class="content">
-		{#if isDigital}
-			<div class="digital-clock">
-				<div class="time-display">
-					{time.toLocaleTimeString()}
+		<div class="view-container">
+			{#if currentView === 'clock'}
+				<div class="view clock-view" class:digital={isDigital} class:analog={!isDigital}>
+					{#if isDigital}
+						<div class="digital-clock">
+							<div class="time-display">
+								{time.toLocaleTimeString()}
+							</div>
+						</div>
+					{:else}
+						<div class="analog-clock">
+							<svg viewBox="0 0 200 200" class="clock-face">
+								<!-- Clock face -->
+								<circle cx="100" cy="100" r="98" fill="white" stroke="#333" stroke-width="2"/>
+								
+								<!-- Hour markers -->
+								{#each Array(12) as _, i}
+									<line 
+										x1="100" 
+										y1="8" 
+										x2="100" 
+										y2="20" 
+										stroke="#333" 
+										stroke-width="3" 
+										transform="rotate({i * 30} 100 100)"
+									/>
+								{/each}
+								
+								<!-- Minute markers -->
+								{#each Array(60) as _, i}
+									{#if i % 5 !== 0}
+										<line 
+											x1="100" 
+											y1="8" 
+											x2="100" 
+											y2="14" 
+											stroke="#666" 
+											stroke-width="1" 
+											transform="rotate({i * 6} 100 100)"
+										/>
+									{/if}
+								{/each}
+								
+								<!-- Hour hand -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="40" 
+									stroke="#333" 
+									stroke-width="6" 
+									stroke-linecap="round"
+									transform="rotate({hourAngle} 100 100)"
+								/>
+								
+								<!-- Minute hand -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="25" 
+									stroke="#333" 
+									stroke-width="4" 
+									stroke-linecap="round"
+									transform="rotate({minuteAngle} 100 100)"
+								/>
+								
+								<!-- Second hand -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="20" 
+									stroke="#ff6b35" 
+									stroke-width="2" 
+									stroke-linecap="round"
+									transform="rotate({secondAngle} 100 100)"
+								/>
+								
+								<!-- Second hand circular tip -->
+								<circle 
+									cx="100" 
+									cy="20" 
+									r="4" 
+									fill="#ff6b35"
+									transform="rotate({secondAngle} 100 100)"
+								/>
+								
+								<!-- Center dot -->
+								<circle cx="100" cy="100" r="6" fill="#333"/>
+							</svg>
+						</div>
+					{/if}
 				</div>
-			</div>
-		{:else}
-			<div class="analog-clock">
-				<svg viewBox="0 0 200 200" class="clock-face">
-					<!-- Clock face -->
-					<circle cx="100" cy="100" r="98" fill="white" stroke="#333" stroke-width="2"/>
-					
-					<!-- Hour markers -->
-					{#each Array(12) as _, i}
-						<line 
-							x1="100" 
-							y1="8" 
-							x2="100" 
-							y2="20" 
-							stroke="#333" 
-							stroke-width="3" 
-							transform="rotate({i * 30} 100 100)"
-						/>
-					{/each}
-					
-					<!-- Minute markers -->
-					{#each Array(60) as _, i}
-						{#if i % 5 !== 0}
-							<line 
-								x1="100" 
-								y1="8" 
-								x2="100" 
-								y2="14" 
-								stroke="#666" 
-								stroke-width="1" 
-								transform="rotate({i * 6} 100 100)"
-							/>
-						{/if}
-					{/each}
-					
-					<!-- Hour hand -->
-					<line 
-						x1="100" 
-						y1="100" 
-						x2="100" 
-						y2="40" 
-						stroke="#333" 
-						stroke-width="6" 
-						stroke-linecap="round"
-						transform="rotate({hourAngle} 100 100)"
-					/>
-					
-					<!-- Minute hand -->
-					<line 
-						x1="100" 
-						y1="100" 
-						x2="100" 
-						y2="25" 
-						stroke="#333" 
-						stroke-width="4" 
-						stroke-linecap="round"
-						transform="rotate({minuteAngle} 100 100)"
-					/>
-					
-					<!-- Second hand -->
-					<line 
-						x1="100" 
-						y1="100" 
-						x2="100" 
-						y2="20" 
-						stroke="#ff6b35" 
-						stroke-width="2" 
-						stroke-linecap="round"
-						transform="rotate({secondAngle} 100 100)"
-					/>
-					
-					<!-- Second hand circular tip -->
-					<circle 
-						cx="100" 
-						cy="20" 
-						r="4" 
-						fill="#ff6b35"
-						transform="rotate({secondAngle} 100 100)"
-					/>
-					
-					<!-- Center dot -->
-					<circle cx="100" cy="100" r="6" fill="#333"/>
-				</svg>
-			</div>
-		{/if}
+			{:else if currentView === 'stopwatch'}
+				<div class="view stopwatch-view">
+					{#if isDigital}
+						<div class="stopwatch-display">
+							<div class="time-display large">
+								{formatStopwatchTime(stopwatchTime)}
+							</div>
+							<div class="controls">
+								<button 
+									class="control-btn primary" 
+									on:click={startStopwatch}
+								>
+									{stopwatchRunning ? 'Stop' : 'Start'}
+								</button>
+								<button 
+									class="control-btn secondary" 
+									on:click={resetStopwatch}
+								>
+									Reset
+								</button>
+							</div>
+						</div>
+					{:else}
+						<div class="analog-stopwatch">
+							<svg viewBox="0 0 200 200" class="stopwatch-face">
+								<!-- Stopwatch face -->
+								<circle cx="100" cy="100" r="98" fill="white" stroke="#333" stroke-width="2"/>
+								
+								<!-- Hour markers -->
+								{#each Array(12) as _, i}
+									<line 
+										x1="100" 
+										y1="8" 
+										x2="100" 
+										y2="20" 
+										stroke="#333" 
+										stroke-width="3" 
+										transform="rotate({i * 30} 100 100)"
+									/>
+								{/each}
+								
+								<!-- Minute markers -->
+								{#each Array(60) as _, i}
+									{#if i % 5 !== 0}
+										<line 
+											x1="100" 
+											y1="8" 
+											x2="100" 
+											y2="14" 
+											stroke="#666" 
+											stroke-width="1" 
+											transform="rotate({i * 6} 100 100)"
+										/>
+									{/if}
+								{/each}
+								
+								<!-- Minute hand (shows elapsed minutes) -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="30" 
+									stroke="#ff6b35" 
+									stroke-width="4" 
+									stroke-linecap="round"
+									transform="rotate({stopwatchMinuteAngle} 100 100)"
+								/>
+								
+								<!-- Second hand (shows elapsed seconds within current minute) -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="20" 
+									stroke="#333" 
+									stroke-width="3" 
+									stroke-linecap="round"
+									transform="rotate({stopwatchSecondAngle} 100 100)"
+								/>
+								
+								<!-- Centisecond hand (fast moving) -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="15" 
+									stroke="#ff6b35" 
+									stroke-width="1" 
+									stroke-linecap="round"
+									transform="rotate({stopwatchCentisecondAngle} 100 100)"
+									opacity="0.7"
+								/>
+								
+								<!-- Center dot -->
+								<circle cx="100" cy="100" r="6" fill="#333"/>
+							</svg>
+							<div class="controls">
+								<button 
+									class="control-btn primary" 
+									on:click={startStopwatch}
+								>
+									{stopwatchRunning ? 'Stop' : 'Start'}
+								</button>
+								<button 
+									class="control-btn secondary" 
+									on:click={resetStopwatch}
+								>
+									Reset
+								</button>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else if currentView === 'timer'}
+				<div class="view timer-view">
+					{#if isDigital}
+						<div class="timer-display">
+							<div class="time-display large">
+								{displayTimerTime}
+							</div>
+							{#if !timerRunning && timerTotalTime === 0}
+								<div class="timer-inputs">
+									<div class="input-group">
+										<label for="timer-minutes">Minutes</label>
+										<input 
+											id="timer-minutes"
+											type="number" 
+											bind:value={timerMinutes} 
+											min="0" 
+											max="59"
+										/>
+									</div>
+									<div class="input-group">
+										<label for="timer-seconds">Seconds</label>
+										<input 
+											id="timer-seconds"
+											type="number" 
+											bind:value={timerSeconds} 
+											min="0" 
+											max="59"
+										/>
+									</div>
+								</div>
+							{/if}
+							<div class="controls">
+								<button 
+									class="control-btn primary" 
+									on:click={startTimer}
+									disabled={!timerRunning && timerMinutes === 0 && timerSeconds === 0}
+								>
+									{timerRunning ? 'Pause' : 'Start'}
+								</button>
+								<button 
+									class="control-btn secondary" 
+									on:click={resetTimer}
+								>
+									Reset
+								</button>
+							</div>
+						</div>
+					{:else}
+						<div class="analog-timer">
+							<svg viewBox="0 0 200 200" class="timer-face">
+								<!-- Timer face -->
+								<circle cx="100" cy="100" r="98" fill="white" stroke="#333" stroke-width="2"/>
+								
+								<!-- Progress arc background -->
+								<circle 
+									cx="100" 
+									cy="100" 
+									r="85" 
+									fill="none" 
+									stroke="rgba(255, 107, 53, 0.2)" 
+									stroke-width="8"
+								/>
+								
+								<!-- Progress arc (countdown) -->
+								<circle 
+									cx="100" 
+									cy="100" 
+									r="85" 
+									fill="none" 
+									stroke="#ff6b35" 
+									stroke-width="8"
+									stroke-linecap="round"
+									stroke-dasharray="{534.07}" 
+									stroke-dashoffset="{534.07 * (1 - timerProgress)}"
+									transform="rotate(-90 100 100)"
+									class:timer-warning={timerProgress > 0.8}
+								/>
+								
+								<!-- Hour markers -->
+								{#each Array(12) as _, i}
+									<line 
+										x1="100" 
+										y1="8" 
+										x2="100" 
+										y2="20" 
+										stroke="#333" 
+										stroke-width="3" 
+										transform="rotate({i * 30} 100 100)"
+									/>
+								{/each}
+								
+								<!-- Minute markers -->
+								{#each Array(60) as _, i}
+									{#if i % 5 !== 0}
+										<line 
+											x1="100" 
+											y1="8" 
+											x2="100" 
+											y2="14" 
+											stroke="#666" 
+											stroke-width="1" 
+											transform="rotate({i * 6} 100 100)"
+										/>
+									{/if}
+								{/each}
+								
+								<!-- Minute hand (shows remaining minutes) -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="40" 
+									stroke="#333" 
+									stroke-width="4" 
+									stroke-linecap="round"
+									transform="rotate({timerMinuteAngle} 100 100)"
+								/>
+								
+								<!-- Second hand (shows remaining seconds) -->
+								<line 
+									x1="100" 
+									y1="100" 
+									x2="100" 
+									y2="25" 
+									stroke="#ff6b35" 
+									stroke-width="3" 
+									stroke-linecap="round"
+									transform="rotate({timerSecondAngle} 100 100)"
+								/>
+								
+								<!-- Center dot -->
+								<circle cx="100" cy="100" r="6" fill="#333"/>
+							</svg>
+							
+							{#if !timerRunning && timerTotalTime === 0}
+								<div class="timer-inputs">
+									<div class="input-group">
+										<label for="timer-minutes-analog">Minutes</label>
+										<input 
+											id="timer-minutes-analog"
+											type="number" 
+											bind:value={timerMinutes} 
+											min="0" 
+											max="59"
+										/>
+									</div>
+									<div class="input-group">
+										<label for="timer-seconds-analog">Seconds</label>
+										<input 
+											id="timer-seconds-analog"
+											type="number" 
+											bind:value={timerSeconds} 
+											min="0" 
+											max="59"
+										/>
+									</div>
+								</div>
+							{/if}
+							
+							<div class="controls">
+								<button 
+									class="control-btn primary" 
+									on:click={startTimer}
+									disabled={!timerRunning && timerMinutes === 0 && timerSeconds === 0}
+								>
+									{timerRunning ? 'Pause' : 'Start'}
+								</button>
+								<button 
+									class="control-btn secondary" 
+									on:click={resetTimer}
+								>
+									Reset
+								</button>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{/if}
+		</div>
 	</main>
 
 	<footer>
@@ -315,7 +733,7 @@
 		margin: 2rem 0 3rem 0;
 	}
 
-	.sub-nav a {
+	.sub-nav button {
 		color: rgba(255, 255, 255, 0.7);
 		text-decoration: none;
 		font-size: 1.2rem;
@@ -324,14 +742,18 @@
 		border-radius: 8px;
 		transition: all 0.2s ease;
 		position: relative;
+		background: none;
+		border: none;
+		cursor: pointer;
+		font-family: inherit;
 	}
 
-	.sub-nav a:hover,
-	.sub-nav a.active {
+	.sub-nav button:hover,
+	.sub-nav button.active {
 		color: #ff6b35;
 	}
 
-	.sub-nav a.active::after {
+	.sub-nav button.active::after {
 		content: '';
 		position: absolute;
 		bottom: -8px;
@@ -343,13 +765,19 @@
 		border-radius: 1px;
 	}
 
-
 	.mode-switch {
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		gap: 1rem;
 		margin: 1rem 0 2rem 0;
+		transition: opacity 0.3s ease, transform 0.3s ease;
+	}
+
+	.mode-switch.hidden {
+		opacity: 0;
+		transform: translateY(-10px);
+		pointer-events: none;
 	}
 
 	.mode-label {
@@ -419,6 +847,32 @@
 		align-items: center;
 	}
 
+	.view-container {
+		width: 100%;
+		position: relative;
+		overflow: hidden;
+	}
+
+	.view {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		animation: slideIn 0.5s ease-out;
+		opacity: 1;
+		transform: translateX(0);
+	}
+
+	@keyframes slideIn {
+		from {
+			opacity: 0;
+			transform: translateX(30px);
+		}
+		to {
+			opacity: 1;
+			transform: translateX(0);
+		}
+	}
+
 	.digital-clock {
 		text-align: center;
 	}
@@ -435,6 +889,11 @@
 		filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.3));
 	}
 
+	.time-display.large {
+		font-size: 5rem;
+		margin-bottom: 2rem;
+	}
+
 	.analog-clock {
 		display: flex;
 		justify-content: center;
@@ -445,6 +904,104 @@
 		width: 300px;
 		height: 300px;
 		filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+	}
+
+	.stopwatch-view,
+	.timer-view {
+		text-align: center;
+		width: 100%;
+	}
+
+	.stopwatch-display,
+	.timer-display {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+	}
+
+	.controls {
+		display: flex;
+		gap: 1.5rem;
+		justify-content: center;
+	}
+
+	.control-btn {
+		padding: 1rem 2rem;
+		border: none;
+		border-radius: 12px;
+		font-size: 1.1rem;
+		font-weight: 600;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		min-width: 120px;
+		font-family: inherit;
+	}
+
+	.control-btn.primary {
+		background: #ff6b35;
+		color: white;
+		box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
+	}
+
+	.control-btn.primary:hover:not(:disabled) {
+		background: #ff5722;
+		transform: translateY(-2px);
+		box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+	}
+
+	.control-btn.secondary {
+		background: rgba(255, 255, 255, 0.1);
+		color: white;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+	}
+
+	.control-btn.secondary:hover {
+		background: rgba(255, 255, 255, 0.2);
+		transform: translateY(-2px);
+	}
+
+	.control-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.timer-inputs {
+		display: flex;
+		gap: 2rem;
+		margin-bottom: 2rem;
+		justify-content: center;
+	}
+
+	.input-group {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.input-group label {
+		color: rgba(255, 255, 255, 0.8);
+		font-size: 0.9rem;
+		font-weight: 500;
+	}
+
+	.input-group input {
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		border-radius: 8px;
+		padding: 0.75rem 1rem;
+		color: white;
+		font-size: 1.1rem;
+		text-align: center;
+		width: 80px;
+		font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+	}
+
+	.input-group input:focus {
+		outline: none;
+		border-color: #ff6b35;
+		box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
 	}
 
 	footer {
@@ -465,29 +1022,90 @@
 			text-align: center;
 		}
 		
-		header h1 {
-			font-size: 2rem;
+		.led-display svg {
+			max-width: 100%;
 		}
 		
 		nav {
 			gap: 1rem;
 		}
 		
-		nav a {
+		nav a,
+		nav button {
 			font-size: 1rem;
 			padding: 0.4rem 0.8rem;
 		}
 		
-		section {
-			padding: 1.5rem;
+		.sub-nav {
+			gap: 2rem;
 		}
 		
-		.add-todo {
+		.sub-nav button {
+			font-size: 1rem;
+			padding: 0.4rem 0.8rem;
+		}
+		
+		.time-display {
+			font-size: 2.5rem;
+			padding: 1.5rem 2rem;
+		}
+		
+		.time-display.large {
+			font-size: 3rem;
+		}
+		
+		.clock-face,
+		.stopwatch-face,
+		.timer-face {
+			width: 250px;
+			height: 250px;
+		}
+		
+		.controls {
 			flex-direction: column;
+			gap: 1rem;
 		}
 		
-		.todo-item {
-			flex-wrap: wrap;
+		.control-btn {
+			padding: 0.8rem 1.5rem;
+			font-size: 1rem;
+			min-width: 140px;
 		}
+		
+		.timer-inputs {
+			gap: 1rem;
+		}
+		
+		.input-group input {
+			width: 70px;
+			padding: 0.6rem 0.8rem;
+		}
+	}
+
+	.analog-stopwatch,
+	.analog-timer {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 2rem;
+		text-align: center;
+		width: 100%;
+	}
+
+	.stopwatch-face,
+	.timer-face {
+		width: 300px;
+		height: 300px;
+		filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+	}
+
+	.timer-warning {
+		stroke: #ff3333 !important;
+		animation: pulse 1s infinite;
+	}
+
+	@keyframes pulse {
+		0%, 100% { opacity: 1; }
+		50% { opacity: 0.7; }
 	}
 </style>
