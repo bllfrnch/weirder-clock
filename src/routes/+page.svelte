@@ -9,6 +9,15 @@
 	let time = new Date();
 	let currentView = 'clock'; // 'clock', 'stopwatch', 'timer'
 	
+	// Weird mode state
+	let isWeirdMode = false;
+	let showWeirdModal = false;
+	let timeWarpValue = 1; // 1 = normal, <1 = slower, >1 = faster
+
+	// Weird time tracking
+	let weirdModeStartTime = null;
+	let weirdModeStartRealTime = null;
+	
 	// Stopwatch state
 	let stopwatchTime = 0;
 	let stopwatchRunning = false;
@@ -22,15 +31,22 @@
 	let timerTotalTime = 0;
 	let timerInitialTime = 0;
 
-	// Weird mode state
-	let isWeirdMode = false;
-	let showWeirdModal = false;
-	let timeWarpValue = 1; // 1 = normal, <1 = slower, >1 = faster
+	let clockInterval;
 
 	onMount(() => {
 		const interval = setInterval(() => {
-			time = new Date();
-		}, 1000);
+			if (isWeirdMode && weirdModeStartTime && weirdModeStartRealTime) {
+				// Calculate how much real time has passed since weird mode started
+				const realTimeElapsed = Date.now() - weirdModeStartRealTime;
+				// Calculate how much weird time should have passed
+				const warpedTimeElapsed = realTimeElapsed * timeWarpValue;
+				// Set displayed time to start time + warped elapsed time
+				time = new Date(weirdModeStartTime.getTime() + warpedTimeElapsed);
+			} else {
+				// Normal mode - just show current time
+				time = new Date();
+			}
+		}, 10); // Update more frequently for smoother animation
 
 		return () => {
 			clearInterval(interval);
@@ -38,6 +54,50 @@
 			if (timerInterval) clearInterval(timerInterval);
 		};
 	});
+
+	// Reset weird time when entering/exiting weird mode
+	$: if (typeof window !== 'undefined') {
+		if (isWeirdMode && !weirdModeStartTime) {
+			// Entering weird mode - capture current time as start point
+			weirdModeStartTime = new Date();
+			weirdModeStartRealTime = Date.now();
+		} else if (!isWeirdMode) {
+			// Exiting weird mode - reset
+			weirdModeStartTime = null;
+			weirdModeStartRealTime = null;
+		}
+	}
+
+	// Reactive clock interval - restart when weird mode or timeWarpValue changes
+	$: if (typeof window !== 'undefined') {
+		// Explicitly depend on these variables to trigger reactivity
+		void isWeirdMode;
+		void timeWarpValue;
+	}
+
+	// Reactive updates when timeWarpValue changes
+	$: if (typeof window !== 'undefined' && stopwatchRunning) {
+		// Restart stopwatch with new warp value
+		clearInterval(stopwatchInterval);
+		stopwatchInterval = setInterval(() => {
+			const increment = isWeirdMode ? 10 * timeWarpValue : 10;
+			stopwatchTime += increment;
+		}, 10);
+	}
+
+	$: if (typeof window !== 'undefined' && timerRunning) {
+		// Restart timer with new warp value
+		clearInterval(timerInterval);
+		timerInterval = setInterval(() => {
+			const decrement = isWeirdMode ? 1000 * timeWarpValue : 1000;
+			timerTotalTime -= decrement;
+			if (timerTotalTime <= 0) {
+				clearInterval(timerInterval);
+				timerRunning = false;
+				timerTotalTime = 0;
+			}
+		}, 1000);
+	}
 
 	// Calculate hand angles for regular clock
 	$: hours = time.getHours() % 12;
@@ -77,7 +137,9 @@
 		} else {
 			stopwatchRunning = true;
 			stopwatchInterval = setInterval(() => {
-				stopwatchTime += 10;
+				// Normal 10ms intervals, but increment by warped amount
+				const increment = isWeirdMode ? 10 * timeWarpValue : 10;
+				stopwatchTime += increment;
 			}, 10);
 		}
 	}
@@ -107,12 +169,13 @@
 			}
 			timerRunning = true;
 			timerInterval = setInterval(() => {
-				timerTotalTime -= 1000;
+				// Normal 1000ms intervals, but decrement by warped amount
+				const decrement = isWeirdMode ? 1000 * timeWarpValue : 1000;
+				timerTotalTime -= decrement;
 				if (timerTotalTime <= 0) {
 					clearInterval(timerInterval);
 					timerRunning = false;
 					timerTotalTime = 0;
-					// You could add a notification or sound here
 				}
 			}, 1000);
 		}
