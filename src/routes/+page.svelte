@@ -1,6 +1,9 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import Header from '$lib/components/Header.svelte';
+	import WeirdModeButton from '$lib/components/WeirdModeButton.svelte';
+	import WeirdModeModal from '$lib/components/WeirdModeModal.svelte';
+	import WeirdModeIndicator from '$lib/components/WeirdModeIndicator.svelte';
 	
 	let isDigital = true;
 	let time = new Date();
@@ -149,6 +152,12 @@
 		showWeirdModal = false;
 	}
 
+	function handleApplyWeirdMode(event) {
+		timeWarpValue = event.detail.timeWarpValue;
+		isWeirdMode = true;
+		showWeirdModal = false;
+	}
+
 	function closeWeirdModal() {
 		showWeirdModal = false;
 	}
@@ -205,9 +214,7 @@
 							<div class="digital-clock">
 								<div class="time-display">
 									{time.toLocaleTimeString()}
-									{#if isWeirdMode}
-										<span class="weird-w digital-w">𝒲</span>
-									{/if}
+									<WeirdModeIndicator {isWeirdMode} />
 								</div>
 							</div>
 						{:else}
@@ -254,8 +261,7 @@
 											font-style="italic" 
 											font-weight="bold" 
 											font-size="24" 
-											fill="#ff6b35"
-											class="weird-w"
+											fill="#ccc"
 										>
 											𝒲
 										</text>
@@ -313,11 +319,7 @@
 						{/if}
 						
 						<!-- Get weird button -->
-						<div class="get-weird-container">
-							<button class="control-btn get-weird-btn" on:click={getWeird}>
-								{isWeirdMode ? 'Get normal' : 'Get weird'}
-							</button>
-						</div>
+						<WeirdModeButton {isWeirdMode} on:click={getWeird} />
 					</div>
 				{:else if currentView === 'stopwatch'}
 					<div class="view stopwatch-view">
@@ -325,6 +327,7 @@
 							<div class="stopwatch-display">
 								<div class="time-display large">
 									{formatStopwatchTime(stopwatchTime)}
+									<WeirdModeIndicator {isWeirdMode} />
 								</div>
 								<div class="controls">
 									<button 
@@ -340,6 +343,8 @@
 										Reset
 									</button>
 								</div>
+								<!-- Get weird button -->
+								<WeirdModeButton {isWeirdMode} on:click={getWeird} />
 							</div>
 						{:else}
 							<div class="analog-stopwatch">
@@ -374,6 +379,22 @@
 											/>
 										{/if}
 									{/each}
+									
+									<!-- Fancy script W when in weird mode (behind hands) -->
+									{#if isWeirdMode}
+										<text 
+											x="100" 
+											y="150" 
+											text-anchor="middle" 
+											font-family="serif" 
+											font-style="italic" 
+											font-weight="bold" 
+											font-size="24" 
+											fill="#ccc"
+										>
+											𝒲
+										</text>
+									{/if}
 									
 									<!-- Minute hand (shows elapsed minutes) -->
 									<line 
@@ -429,6 +450,8 @@
 										Reset
 									</button>
 								</div>
+								<!-- Get weird button -->
+								<WeirdModeButton {isWeirdMode} on:click={getWeird} />
 							</div>
 						{/if}
 					</div>
@@ -438,6 +461,7 @@
 							<div class="timer-display">
 								<div class="time-display large">
 									{displayTimerTime}
+									<WeirdModeIndicator {isWeirdMode} />
 								</div>
 								{#if !timerRunning && timerTotalTime === 0}
 									<div class="timer-inputs">
@@ -478,6 +502,8 @@
 										Reset
 									</button>
 								</div>
+								<!-- Get weird button -->
+								<WeirdModeButton {isWeirdMode} on:click={getWeird} />
 							</div>
 						{:else}
 							<div class="analog-timer">
@@ -537,6 +563,22 @@
 											/>
 										{/if}
 									{/each}
+									
+									<!-- Fancy script W when in weird mode (behind hands) -->
+									{#if isWeirdMode}
+										<text 
+											x="100" 
+											y="150" 
+											text-anchor="middle" 
+											font-family="serif" 
+											font-style="italic" 
+											font-weight="bold" 
+											font-size="24" 
+											fill="#ccc"
+										>
+											𝒲
+										</text>
+									{/if}
 									
 									<!-- Minute hand (shows remaining minutes) -->
 									<line 
@@ -606,6 +648,8 @@
 										Reset
 									</button>
 								</div>
+								<!-- Get weird button -->
+								<WeirdModeButton {isWeirdMode} on:click={getWeird} />
 							</div>
 						{/if}
 					</div>
@@ -619,47 +663,12 @@
 	</footer>
 
 	<!-- Weird Mode Modal -->
-	{#if showWeirdModal}
-		<div class="modal-backdrop" on:click={closeWeirdModal}>
-			<div class="modal" on:click|stopPropagation>
-				<div class="modal-header">
-					<h2>Adjust weirdness value</h2>
-					<button class="modal-close" on:click={closeWeirdModal}>×</button>
-				</div>
-				<div class="modal-content">
-					<p>Drag the slider to expand or contract time:</p>
-					<div class="slider-container">
-						<label for="time-warp">Time Speed</label>
-						<input 
-							id="time-warp"
-							type="range" 
-							min="0.1" 
-							max="1.9" 
-							step="0.1" 
-							bind:value={timeWarpValue}
-							class="time-warp-slider"
-						/>
-						<div class="slider-labels">
-							<span>Slower</span>
-							<span>Normal</span>
-							<span>Faster</span>
-						</div>
-						<div class="current-value">
-							Current: {timeWarpValue}x
-						</div>
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button class="control-btn secondary" on:click={closeWeirdModal}>
-						Cancel
-					</button>
-					<button class="control-btn primary" on:click={applyWeirdMode}>
-						Apply Weird Mode
-					</button>
-				</div>
-			</div>
-		</div>
-	{/if}
+	<WeirdModeModal 
+		show={showWeirdModal} 
+		bind:timeWarpValue 
+		on:close={closeWeirdModal}
+		on:apply={handleApplyWeirdMode}
+	/>
 </main>
 
 <style>
@@ -906,15 +915,12 @@
 	}
 
 	.control-btn.primary {
-		background: #ff6b35;
+		background: #28a745;
 		color: white;
-		box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4);
 	}
 
 	.control-btn.primary:hover:not(:disabled) {
-		background: #ff5722;
-		transform: translateY(-2px);
-		box-shadow: 0 6px 20px rgba(255, 107, 53, 0.6);
+		background: #34ce57;
 	}
 
 	.control-btn.secondary {
@@ -925,7 +931,6 @@
 
 	.control-btn.secondary:hover {
 		background: rgba(255, 255, 255, 0.2);
-		transform: translateY(-2px);
 	}
 
 	.control-btn:disabled {
@@ -968,7 +973,6 @@
 	.input-group input:focus {
 		outline: none;
 		border-color: #ff6b35;
-		box-shadow: 0 0 0 2px rgba(255, 107, 53, 0.2);
 	}
 
 	footer {
@@ -1039,7 +1043,6 @@
 	.timer-face {
 		width: 300px;
 		height: 300px;
-		filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
 	}
 
 	.timer-warning {
@@ -1076,11 +1079,10 @@
 
 	.get-weird-btn:hover {
 		background: #ff1744;
-		transform: translateY(-2px);
 	}
 
 	.get-weird-btn:active {
-		transform: translateY(0);
+		/* No transform on active state */
 	}
 
 	@keyframes redPulse {
@@ -1116,7 +1118,6 @@
 		width: 90%;
 		max-height: 80vh;
 		overflow: auto;
-		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 	}
 
 	.modal-header {
@@ -1191,7 +1192,6 @@
 		border-radius: 50%;
 		background: #888;
 		cursor: pointer;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 		transition: background 0.2s ease;
 	}
 
@@ -1206,7 +1206,6 @@
 		background: #888;
 		cursor: pointer;
 		border: none;
-		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 		transition: background 0.2s ease;
 	}
 
@@ -1241,12 +1240,10 @@
 		background: #28a745;
 		color: white;
 		border-radius: 8px;
-		box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 	}
 
 	.modal-footer .control-btn.primary:hover:not(:disabled) {
 		background: #34ce57;
-		box-shadow: 0 6px 20px rgba(52, 206, 87, 0.4);
 		transform: none;
 	}
 
@@ -1254,38 +1251,23 @@
 		background: #dc3545;
 		color: white;
 		border-radius: 8px;
-		box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
 	}
 
 	.modal-footer .control-btn.secondary:hover {
 		background: #ff1744;
-		box-shadow: 0 6px 20px rgba(255, 23, 68, 0.4);
 		transform: none;
 	}
 
 	/* Weird W styling */
-	.weird-w {
-		animation: weirdGlow 2s ease-in-out infinite;
-	}
-
 	.digital-w {
 		position: absolute;
 		bottom: 10px;
 		left: 50%;
 		transform: translateX(-50%);
 		font-size: 2rem;
-		color: #ff6b35;
+		color: #333;
 		font-family: serif;
 		font-style: italic;
 		font-weight: bold;
-	}
-
-	@keyframes weirdGlow {
-		0%, 100% { 
-			filter: drop-shadow(0 0 5px #ff6b35);
-		}
-		50% { 
-			filter: drop-shadow(0 0 15px #ff1744) drop-shadow(0 0 25px #ff1744);
-		}
 	}
 </style>
