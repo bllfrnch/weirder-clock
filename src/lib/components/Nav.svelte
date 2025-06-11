@@ -41,4 +41,17 @@
 	nav a {
 		color: #ff6b35;
 	}
+
+	@media (max-width: 768px) {
+		nav {
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+		
+		nav a,
+		nav button {
+			font-size: 0.9rem;
+			padding: 0.4rem 0.8rem;
+		}
+	}
 </style> 

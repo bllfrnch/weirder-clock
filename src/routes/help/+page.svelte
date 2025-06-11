@@ -44,7 +44,7 @@
 						<li><strong>Digital Mode:</strong> Shows remaining time in MM:SS format</li>
 						<li><strong>Analog Mode:</strong> Clock face with progress arc showing countdown</li>
 						<li><strong>Set Time:</strong> Input minutes and seconds when timer is stopped</li>
-						<li><strong>Warning:</strong> Progress arc turns red and pulses when <20% time remains</li>
+						<li><strong>Warning:</strong> Progress arc turns red and pulses when &lt;20% time remains</li>
 						<li><strong>Start/Pause:</strong> Begin countdown or pause temporarily</li>
 						<li><strong>Reset:</strong> Clear timer and return to input mode</li>
 					</ul>

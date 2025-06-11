@@ -23,6 +23,8 @@
 			flex-direction: column;
 			gap: 1rem;
 			text-align: center;
+			align-items: center;
+			margin: 1rem;
 		}
 	}
 </style> 

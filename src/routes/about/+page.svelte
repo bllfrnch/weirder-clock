@@ -84,34 +84,6 @@
 		flex-direction: column;
 	}
 
-	header {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		margin: 2rem;
-	}
-
-	.led-display svg {
-		width: 100%;
-		height: auto;
-		max-width: 650px;
-		filter: drop-shadow(0 0 3px #ff6b35) drop-shadow(0 0 16px #ff6b35);
-		transform: skewX(-12deg);
-	}
-
-	nav a {
-		color: #ff6b35;
-		text-decoration: none;
-		font-weight: 500;
-		padding: 0.5rem 1rem;
-		border-radius: 8px;
-		transition: all 0.2s ease;
-	}
-
-	nav a:hover {
-		background: rgba(255, 107, 53, 0.1);
-	}
-
 	.content {
 		flex: 1;
 		max-width: 800px;
@@ -168,16 +140,6 @@
 	}
 
 	@media (max-width: 768px) {
-		header {
-			flex-direction: column;
-			gap: 1rem;
-			text-align: center;
-		}
-		
-		.led-display svg {
-			max-width: 100%;
-		}
-
 		.content {
 			padding: 1rem;
 		}
