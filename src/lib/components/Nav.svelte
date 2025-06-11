@@ -43,7 +43,7 @@
 		color: #ff6b35;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1023px) {
 		nav {
 			justify-content: center;
 			flex-wrap: wrap;

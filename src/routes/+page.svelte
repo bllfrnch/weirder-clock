@@ -19,6 +19,11 @@
 	let timerTotalTime = 0;
 	let timerInitialTime = 0;
 
+	// Weird mode state
+	let isWeirdMode = false;
+	let showWeirdModal = false;
+	let timeWarpValue = 1; // 1 = normal, <1 = slower, >1 = faster
+
 	onMount(() => {
 		const interval = setInterval(() => {
 			time = new Date();
@@ -125,6 +130,28 @@
 	}
 
 	$: displayTimerTime = timerTotalTime > 0 ? formatTimerTime(timerTotalTime) : `${timerMinutes.toString().padStart(2, '0')}:${timerSeconds.toString().padStart(2, '0')}`;
+
+	// Weird mode functions
+	function getWeird() {
+		if (isWeirdMode) {
+			// Return to normal mode
+			isWeirdMode = false;
+			timeWarpValue = 1;
+		} else {
+			// Open the weird modal with default value
+			timeWarpValue = 1;
+			showWeirdModal = true;
+		}
+	}
+
+	function applyWeirdMode() {
+		isWeirdMode = true;
+		showWeirdModal = false;
+	}
+
+	function closeWeirdModal() {
+		showWeirdModal = false;
+	}
 </script>
 
 <svelte:head>
@@ -178,6 +205,9 @@
 							<div class="digital-clock">
 								<div class="time-display">
 									{time.toLocaleTimeString()}
+									{#if isWeirdMode}
+										<span class="weird-w digital-w">𝒲</span>
+									{/if}
 								</div>
 							</div>
 						{:else}
@@ -213,6 +243,23 @@
 											/>
 										{/if}
 									{/each}
+									
+									<!-- Fancy script W when in weird mode (behind hands) -->
+									{#if isWeirdMode}
+										<text 
+											x="100" 
+											y="150" 
+											text-anchor="middle" 
+											font-family="serif" 
+											font-style="italic" 
+											font-weight="bold" 
+											font-size="24" 
+											fill="#ff6b35"
+											class="weird-w"
+										>
+											𝒲
+										</text>
+									{/if}
 									
 									<!-- Hour hand -->
 									<line 
@@ -264,6 +311,13 @@
 								</svg>
 							</div>
 						{/if}
+						
+						<!-- Get weird button -->
+						<div class="get-weird-container">
+							<button class="control-btn get-weird-btn" on:click={getWeird}>
+								{isWeirdMode ? 'Get normal' : 'Get weird'}
+							</button>
+						</div>
 					</div>
 				{:else if currentView === 'stopwatch'}
 					<div class="view stopwatch-view">
@@ -563,6 +617,49 @@
 	<footer>
 		<p>© {new Date().getFullYear()} - The Weird Clock Team</p>
 	</footer>
+
+	<!-- Weird Mode Modal -->
+	{#if showWeirdModal}
+		<div class="modal-backdrop" on:click={closeWeirdModal}>
+			<div class="modal" on:click|stopPropagation>
+				<div class="modal-header">
+					<h2>Adjust weirdness value</h2>
+					<button class="modal-close" on:click={closeWeirdModal}>×</button>
+				</div>
+				<div class="modal-content">
+					<p>Drag the slider to expand or contract time:</p>
+					<div class="slider-container">
+						<label for="time-warp">Time Speed</label>
+						<input 
+							id="time-warp"
+							type="range" 
+							min="0.1" 
+							max="1.9" 
+							step="0.1" 
+							bind:value={timeWarpValue}
+							class="time-warp-slider"
+						/>
+						<div class="slider-labels">
+							<span>Slower</span>
+							<span>Normal</span>
+							<span>Faster</span>
+						</div>
+						<div class="current-value">
+							Current: {timeWarpValue}x
+						</div>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="control-btn secondary" on:click={closeWeirdModal}>
+						Cancel
+					</button>
+					<button class="control-btn primary" on:click={applyWeirdMode}>
+						Apply Weird Mode
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
 </main>
 
 <style>
@@ -595,7 +692,7 @@
 		display: flex;
 		justify-content: center;
 		gap: 3rem;
-		margin: 2rem 0 3rem 0;
+		margin: 1rem 0 1.5rem 0;
 	}
 
 	.sub-nav button {
@@ -725,6 +822,11 @@
 		animation: slideIn 0.5s ease-out;
 		opacity: 1;
 		transform: translateX(0);
+	}
+
+	.clock-view {
+		flex-direction: column;
+		gap: 2rem;
 	}
 
 	@keyframes slideIn {
@@ -876,7 +978,7 @@
 		margin-top: auto;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1023px) {
 		.sub-nav {
 			gap: 2rem;
 		}
@@ -948,5 +1050,242 @@
 	@keyframes pulse {
 		0%, 100% { opacity: 1; }
 		50% { opacity: 0.7; }
+	}
+
+	/* Get weird button styles */
+	.get-weird-container {
+		display: flex;
+		justify-content: center;
+		margin-top: 2rem;
+	}
+
+	.get-weird-btn {
+		background: #dc3545;
+		color: white;
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 1px;
+		border: none;
+		padding: 1rem 2rem;
+		border-radius: 8px;
+		font-size: 1.1rem;
+		cursor: pointer;
+		transition: all 0.2s ease;
+		animation: redPulse 2s ease-in-out infinite;
+	}
+
+	.get-weird-btn:hover {
+		background: #ff1744;
+		transform: translateY(-2px);
+	}
+
+	.get-weird-btn:active {
+		transform: translateY(0);
+	}
+
+	@keyframes redPulse {
+		0%, 100% { 
+			background: #dc3545;
+			transform: scale(1);
+		}
+		50% { 
+			background: #ff1744;
+			transform: scale(1.05);
+		}
+	}
+
+	/* Modal styles */
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.8);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+	}
+
+	.modal {
+		background: #1a1a1a;
+		border: 2px solid #666;
+		border-radius: 12px;
+		max-width: 500px;
+		width: 90%;
+		max-height: 80vh;
+		overflow: auto;
+		box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+	}
+
+	.modal-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 1.5rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+	}
+
+	.modal-header h2 {
+		color: #ccc;
+		margin: 0;
+		font-size: 1.5rem;
+	}
+
+	.modal-close {
+		background: none;
+		border: none;
+		color: #aaa;
+		font-size: 2rem;
+		cursor: pointer;
+		padding: 0;
+		width: 30px;
+		height: 30px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 50%;
+		transition: all 0.2s ease;
+	}
+
+	.modal-close:hover {
+		background: rgba(255, 255, 255, 0.1);
+		color: white;
+	}
+
+	.modal-content {
+		padding: 2rem;
+	}
+
+	.modal-content p {
+		color: rgba(255, 255, 255, 0.8);
+		margin-bottom: 2rem;
+	}
+
+	.slider-container {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.slider-container label {
+		color: #ccc;
+		font-weight: 600;
+		font-size: 1.1rem;
+	}
+
+	.time-warp-slider {
+		width: 100%;
+		height: 8px;
+		border-radius: 4px;
+		background: rgba(255, 255, 255, 0.2);
+		outline: none;
+		appearance: none;
+	}
+
+	.time-warp-slider::-webkit-slider-thumb {
+		appearance: none;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #888;
+		cursor: pointer;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+		transition: background 0.2s ease;
+	}
+
+	.time-warp-slider::-webkit-slider-thumb:hover {
+		background: #aaa;
+	}
+
+	.time-warp-slider::-moz-range-thumb {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #888;
+		cursor: pointer;
+		border: none;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+		transition: background 0.2s ease;
+	}
+
+	.time-warp-slider::-moz-range-thumb:hover {
+		background: #aaa;
+	}
+
+	.slider-labels {
+		display: flex;
+		justify-content: space-between;
+		color: rgba(255, 255, 255, 0.6);
+		font-size: 0.9rem;
+	}
+
+	.current-value {
+		text-align: center;
+		color: #ccc;
+		font-weight: 600;
+		font-size: 1.2rem;
+	}
+
+	.modal-footer {
+		display: flex;
+		gap: 1rem;
+		justify-content: flex-end;
+		padding: 1.5rem;
+		border-top: 1px solid rgba(255, 255, 255, 0.2);
+	}
+
+	/* Modal button overrides */
+	.modal-footer .control-btn.primary {
+		background: #28a745;
+		color: white;
+		border-radius: 8px;
+		box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+	}
+
+	.modal-footer .control-btn.primary:hover:not(:disabled) {
+		background: #34ce57;
+		box-shadow: 0 6px 20px rgba(52, 206, 87, 0.4);
+		transform: none;
+	}
+
+	.modal-footer .control-btn.secondary {
+		background: #dc3545;
+		color: white;
+		border-radius: 8px;
+		box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+	}
+
+	.modal-footer .control-btn.secondary:hover {
+		background: #ff1744;
+		box-shadow: 0 6px 20px rgba(255, 23, 68, 0.4);
+		transform: none;
+	}
+
+	/* Weird W styling */
+	.weird-w {
+		animation: weirdGlow 2s ease-in-out infinite;
+	}
+
+	.digital-w {
+		position: absolute;
+		bottom: 10px;
+		left: 50%;
+		transform: translateX(-50%);
+		font-size: 2rem;
+		color: #ff6b35;
+		font-family: serif;
+		font-style: italic;
+		font-weight: bold;
+	}
+
+	@keyframes weirdGlow {
+		0%, 100% { 
+			filter: drop-shadow(0 0 5px #ff6b35);
+		}
+		50% { 
+			filter: drop-shadow(0 0 15px #ff1744) drop-shadow(0 0 25px #ff1744);
+		}
 	}
 </style>

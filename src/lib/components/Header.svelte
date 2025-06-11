@@ -18,7 +18,7 @@
 		margin: 2rem;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1023px) {
 		header {
 			flex-direction: column;
 			gap: 1rem;

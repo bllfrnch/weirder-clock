@@ -150,7 +150,7 @@
 		margin-top: auto;
 	}
 
-	@media (max-width: 768px) {
+	@media (max-width: 1023px) {
 		.content {
 			padding: 1rem;
 		}
