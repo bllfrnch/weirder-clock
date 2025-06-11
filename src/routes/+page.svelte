@@ -877,10 +877,6 @@
 	}
 
 	@media (max-width: 768px) {
-		main {
-			padding: 1rem;
-		}
-		
 		.sub-nav {
 			gap: 2rem;
 		}

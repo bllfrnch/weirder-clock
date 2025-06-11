@@ -31,6 +31,7 @@
 		font-family: inherit;
 		padding: 0.5rem 1rem;
 		transition: all 0.2s ease;
+		white-space: nowrap;
 	}
 
 	nav a:hover,
